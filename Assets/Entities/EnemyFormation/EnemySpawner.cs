@@ -10,7 +10,7 @@ public class EnemySpawner : MonoBehaviour {
 	public float padding;
 	public float spawnDelaySeconds = 1;
 	
-	private bool directionRight = false;
+	private bool directionRight = true;
 	private float minX;
 	private float maxX;
 	
@@ -18,14 +18,14 @@ public class EnemySpawner : MonoBehaviour {
 	void Start () {
 		// Setup the play scene with bounderies 
 		float distance = transform.position.z - Camera.main.transform.position.z;
-		Vector3 leftMost = Camera.main.ViewportToWorldPoint(new Vector3(0,0,distance));
-		Vector3 rightMost = Camera.main.ViewportToWorldPoint(new Vector3(1,0,distance));
+		Vector3 leftMost = Camera.main.ViewportToWorldPoint (new Vector3 (0,0,distance));
+		Vector3 rightMost = Camera.main.ViewportToWorldPoint (new Vector3 (1,0,distance));
 		
 		minX = leftMost.x + padding;
 		maxX = rightMost.x - padding;
 		
 		// Spawn the initial enemy formation 
-		SpawnEnemyFormation();
+		SpawnUntilFull();
 	}
 	
 	public void OnDrawGizmos () {
@@ -48,39 +48,27 @@ public class EnemySpawner : MonoBehaviour {
 			directionRight = !directionRight;	
 		}
 		
-		if (AllEnemiesAreDead()) {
+		if (AllEnemiesAreDead ()) {
 			Debug.Log ("All enemies has be fallen!");
 			SpawnUntilFull ();
 		}
 	}
 	
-	void SpawnEnemyFormation () {
-		// loop over each child of the enemy formation, 
-		// which is linked with this this script "EnemySpawner",
-		// and grab their position and spawn an enemy on their top.
-		foreach(Transform child in transform) {
-			GameObject enemy = Instantiate(enemyPrefab, child.transform.position, Quaternion.identity) as GameObject;
-			
+	void SpawnUntilFull () {
+		Transform freePos = NextFreePosition ();
+		if (freePos != null) {
+			GameObject enemy = Instantiate (enemyPrefab, freePos.position, Quaternion.identity) as GameObject;
 			// set the formation place (formally the Position object) 
 			// as the parent transform of the enemy
-			enemy.transform.parent = child;
-		}
+			enemy.transform.parent = freePos;
+			
+			if (NextFreePosition ()) {
+				Invoke("SpawnUntilFull", spawnDelaySeconds);
+			}
+		}	
 	}
 	
-	void SpawnUntilFull () {
-		Transform freePos = nextFreePosition ();
-		GameObject enemy = Instantiate(enemyPrefab, freePos.position, Quaternion.identity) as GameObject;
-		
-		// set the formation place (formally the Position object) 
-		// as the parent transform of the enemy
-		enemy.transform.parent = freePos;
-		
-		if (FreePositionExits()) {
-			Invoke("SpawnUntilFull", spawnDelaySeconds);
-		}
-	}
-	
-	Transform nextFreePosition () {
+	Transform NextFreePosition () {
 		// loop over each child of the enemy formation
 		foreach(Transform child in transform) {
 			if (child.childCount <= 0) {
@@ -88,16 +76,6 @@ public class EnemySpawner : MonoBehaviour {
 			} 
 		}
 		return null;	
-	}
-	
-	bool FreePositionExits () {
-		// loop over each child of the enemy formation
-		foreach(Transform child in transform) {
-			if (child.childCount > 0) {
-				return true;
-			} 
-		}
-		return false;	
 	}
 	
 	bool AllEnemiesAreDead () {
